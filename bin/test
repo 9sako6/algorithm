@@ -1,0 +1,26 @@
+#! /usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'rspec/expectations'
+require 'parallel'
+include RSpec::Matchers
+
+test_files = Dir.glob('./test/*.test.cpp')
+
+Parallel.each(test_files, in_threads: 4) do |test_file_path|
+  # print info
+  puts "run: #{test_file_path}"
+  # compile
+  output_name = "#{File.basename(test_file_path)}.out"
+  `/usr/local/bin/g++ -std=c++14 -Wall #{test_file_path} -o #{output_name}`
+  File.open(test_file_path, 'r') do |test_file_object|
+    problem_url = test_file_object.read[/^#define\sPROBLEM.+$/][/https?:[^"]+/]
+    problem_id = File.basename(problem_url)
+    testcases_path = "./testcases/aoj_testcases/#{problem_id}"
+    Dir.glob("#{testcases_path}/*.in").each do |testcase_in_file_path|
+      testcase_out_file_path = testcase_in_file_path.gsub(/\.in$/, '.out')
+      expect(`cat #{testcase_out_file_path}`).to eq `cat #{testcase_in_file_path} | ./#{output_name}`
+    end
+  end
+  `rm -f #{output_name}`
+end

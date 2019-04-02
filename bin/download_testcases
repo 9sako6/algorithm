@@ -1,0 +1,57 @@
+#! /usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'json'
+require 'fileutils'
+require './verify/helper/aoj_helper.rb'
+require './verify/helper/progress_bar.rb'
+
+def download_testcases(problem_id, ppg, line)
+  Dir.mkdir("./testcases/aoj_testcases/#{problem_id}")
+  header = AOJHelper.get_header(problem_id)
+  header['headers'].each_with_index do |head, i|
+    # progress bar
+    printer = ppg.gen(line)
+    case_size = header['headers'].size
+    rate = (i + 1 == case_size - 1 ? 1.0 : (i + 1).to_f / case_size)
+    bar = '#' * (25 * rate).to_i
+    str = format('%s: %s %3.0f%%', problem_id.ljust(12), bar.ljust(25, '.'), rate * 100)
+    printer.pri(str)
+    # download
+    testcase_in = AOJHelper.get_testcase_in(problem_id, head['serial'])
+    testcase_out = AOJHelper.get_testcase_out(problem_id, head['serial'])
+    base_filepath = "./testcases/aoj_testcases/#{problem_id}/#{head['serial']}"
+    # input cases
+    File.open(base_filepath + '.in', 'w') do |f|
+      f.puts testcase_in
+    end
+    # output cases
+    File.open(base_filepath + '.out', 'w') do |f|
+      f.puts testcase_out
+    end
+  end
+rescue Errno::EEXIST
+  warn "#{problem_id} is skipped because ./testcases/aoj_testcases/#{problem_id} is already exist"
+end
+
+# make problem's url list
+url_list = []
+test_files = Dir.glob('./test/*.test.cpp')
+test_files.each do |test_file|
+  File.open(test_file, 'r') do |f|
+    problem_defined_line = f.read[/^#define\sPROBLEM.+$/]
+    problem_url = problem_defined_line[/https?:[^"]+/]
+    url_list << problem_url
+  end
+end
+
+# mkdir ./testcases/aoj_testcases if it is not exist
+unless Dir.exist?('./testcases/aoj_testcases')
+  FileUtils.mkdir_p('./testcases/aoj_testcases')
+end
+
+ppg = ProcessPrinterGenerator.new(url_list.size)
+url_list.each_with_index do |url, i|
+  fork { download_testcases(File.basename(url), ppg, i + 1) }
+end
+Process.waitall
