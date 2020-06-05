@@ -51,4 +51,9 @@ struct WeightedUnionFind {
         assert(0 <= y && y < n);
         return weight(y) - weight(x);
     }
+    bool same(int x, int y) {
+        assert(0 <= x && x < n);
+        assert(0 <= y && y < n);
+        return find(x) == find(y);
+    }
 };

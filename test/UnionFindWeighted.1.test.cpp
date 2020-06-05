@@ -15,7 +15,7 @@ int main() {
             std::cin >> d;
             uf.unite(b, c, d);
         } else {
-            if (uf.find(b) == uf.find(c)) {
+            if (uf.same(b, c)) {
                 std::cout << uf.diff(b, c) << std::endl;
             } else {
                 std::cout << "?" << std::endl;
